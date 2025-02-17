@@ -1,0 +1,8 @@
+{
+  "C_Cpp.errorSquiggles": "enabled",
+  "files.associations": {
+    "cstdint": "cpp",
+    "array": "cpp",
+    "iostream": "cpp"
+  }
+}
