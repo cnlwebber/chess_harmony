@@ -1,10 +1,12 @@
 // chess_constants.h
 #ifndef HARMONY_CHESS_CONSTANTS_H
 #define HARMONY_CHESS_CONSTANTS_H
-#include <cstdint>
+
 #include <array>
+#include <stdlib.h>
 #include "aliases.h"
 #include "constants_utils.h"
+
 // Board is little endian rank file mapping such that 
 // a1 is the first bit; starting from the right
 
@@ -26,9 +28,10 @@ namespace harmony_chess {
 
   // squares
 
-  enum class square_value : u64 {
-    //    0x0000 0000 0000 0000
-    A_1 = 0x0000000000000001, //
+  constexpr u8 NumberOfSquares = 64;
+  
+  enum class SquareValue : u64 {
+    A_1 = 0x0000000000000001,
     B_1 = 0x0000000000000002,
     C_1 = 0x0000000000000004,
     D_1 = 0x0000000000000008,
@@ -99,9 +102,9 @@ namespace harmony_chess {
     F_8 = 0x2000000000000000,
     G_8 = 0x4000000000000000,
     H_8 = 0x8000000000000000
-  };
+  } ;
 
-  enum class square_identifier : u8 {
+  enum class SquareIdentifier : u8 {
     A_1, B_1, C_1, D_1, E_1, F_1, G_1, H_1,
     A_2, B_2, C_2, D_2, E_2, F_2, G_2, H_2,
     A_3, B_3, C_3, D_3, E_3, F_3, G_3, H_3,
@@ -110,17 +113,19 @@ namespace harmony_chess {
     A_6, B_6, C_6, D_6, E_6, F_6, G_6, H_6,
     A_7, B_7, C_7, D_7, E_7, F_7, G_7, H_7,
     A_8, B_8, C_8, D_8, E_8, F_8, G_8, H_8
-  };
+  } ;
 
 
   // files
 
-  constexpr u64 A_FILE = 0x0101010101010101;
-  constexpr u64 B_FILE = 0x0202020202020202;
-  constexpr u64 C_FILE = 0x0404040404040404;
-  constexpr u64 D_FILE = 0x0808080808080808;
-  constexpr u64 E_FILE = 0x1010101010101010;
-  constexpr u64 F_FILE = 0x2020202020202020;
+  constexpr u8 NumberOfFilesAndRanks = 8;
+
+  constexpr u64 A_File = 0x0101010101010101;
+  constexpr u64 B_File = 0x0202020202020202;
+  constexpr u64 C_File = 0x0404040404040404;
+  constexpr u64 D_File = 0x0808080808080808;
+  constexpr u64 E_File = 0x1010101010101010;
+  constexpr u64 F_File = 0x2020202020202020;
   constexpr u64 G_File = 0x4040404040404040;
   constexpr u64 H_File = 0x8080808080808080;
 
@@ -147,7 +152,7 @@ namespace harmony_chess {
 
   // directions
 
-  enum class direction : int {
+  enum class Direction : s8 {
     noWe = 7,
     nort = 8,
     noEa = 9,
@@ -158,103 +163,126 @@ namespace harmony_chess {
 
     east = 1,
     west = -1,
+  } ;
 
+  constexpr u8 NumberOfDirections = 8;
+
+  constexpr std::array<Direction, 8> AllDirections = {
+    Direction::nort,
+    Direction::noEa,
+    Direction::east,
+    Direction::soEa,
+    Direction::sout,
+    Direction::soWe,
+    Direction::west,
+    Direction::noWe
   };
+
+  // knight moves
+
+  enum class KnightMoves : s8 {
+    noNoEa = 17,
+    noEaEa = 10,
+    soEaEa = -6,
+    soSoEa = -15,
+    soSoWe = -17,
+    soWeWe = -10,
+    noWeWe = 6,
+    noNoWe = 15
+  } ;
+
+  constexpr std::array<KnightMoves, 8> AllKnightMoves = {
+    KnightMoves::noNoEa,
+    KnightMoves::noEaEa,
+    KnightMoves::soEaEa,
+    KnightMoves::soSoEa,
+    KnightMoves::soSoWe,
+    KnightMoves::soWeWe,
+    KnightMoves::noWeWe,
+    KnightMoves::noNoWe
+  };
+
+  // edges and corners
+
+  constexpr u64 AllEdges = 0xff818181818181ff;
+  constexpr u64 AllCorners = 0x8100000000000081;
+
+  // center (d4, e4, d5, e5)
+  // extended center (c3, d3, e3, f3, c4, d4, ..., f6)
+
+  constexpr u64 MainCenter = 0x0000001818000000;
+  constexpr u64 ExtendedCenter = 0x00003C3C3C3C0000;
 
   // universal constants
 
   constexpr u64 UniversalSet = 0xffffffffffffffff;
 
+  // evaluations
+
+  enum class PieceWeights : u16 {
+    PawnWeight = 100,
+    BishopWeight = 300,
+    KnightWeight = 300,
+    RookWeight = 500,
+    QueenWeight = 900,
+    KingWeight = 10000
+  } ;
+
   // ray constants
   // rays stored in clock wise order starting from north:
   //    [nort, noEa, east, soEa, sout, soWE, west, noWe]
 
-  constexpr std::array<u64, 8> calculate_ray_masks(square_value the_square) {
+  constexpr SquareValue SquareIdentifier_to_value(SquareIdentifier the_square) {
+    return static_cast<SquareValue>((1ULL << static_cast<u8>(the_square)));
+}
+
+  constexpr std::array<std::array<u64, 8>, 64> calculate_ray_masks() {
   // returns an array containing all ray_masks for the_square provided
 
-    std::array<u64, 8> the_masks = std::array<u64, 8>();
-    the_masks[0] = calculate_a_ray_mask(the_square, direction::nort);
-    the_masks[1] = calculate_a_ray_mask(the_square, direction::noEa);
-    the_masks[2] = calculate_a_ray_mask(the_square, direction::east);
-    the_masks[3] = calculate_a_ray_mask(the_square, direction::soEa);
-    the_masks[4] = calculate_a_ray_mask(the_square, direction::sout);
-    the_masks[5] = calculate_a_ray_mask(the_square, direction::soWe);
-    the_masks[6] = calculate_a_ray_mask(the_square, direction::west);
-    the_masks[7] = calculate_a_ray_mask(the_square, direction::noWe);
-    return the_masks;
+    std::array<std::array<u64, 8>, 64> all_masks{};
+    for (u8 sq = 0; sq < NumberOfSquares; sq++) {
+      for (u8 dir = 0; dir < NumberOfDirections; dir++) {
+        all_masks[sq][dir] = calculate_a_ray_mask(SquareIdentifier_to_value(static_cast<SquareIdentifier>(sq)), AllDirections[dir]);
+      }
+    }
+
+    return all_masks;
   } ;
 
-  constexpr std::array<u64, 8> A_1_RayMasks = calculate_ray_masks(square_value::A_1);
-  constexpr std::array<u64, 8> B_1_RayMasks = calculate_ray_masks(square_value::B_1);
-  constexpr std::array<u64, 8> C_1_RayMasks = calculate_ray_masks(square_value::C_1);
-  constexpr std::array<u64, 8> D_1_RayMasks = calculate_ray_masks(square_value::D_1);
-  constexpr std::array<u64, 8> E_1_RayMasks = calculate_ray_masks(square_value::E_1);
-  constexpr std::array<u64, 8> F_1_RayMasks = calculate_ray_masks(square_value::F_1);
-  constexpr std::array<u64, 8> G_1_RayMasks = calculate_ray_masks(square_value::G_1);
-  constexpr std::array<u64, 8> H_1_RayMasks = calculate_ray_masks(square_value::H_1);
+  constexpr u64 calculate_a_ray_mask(SquareValue the_square, Direction the_direction) {
+    u64 mask = 0, bit = static_cast<u64>(the_square);
+    s8 shift = static_cast<s8>(the_direction);
 
-  constexpr std::array<u64, 8> A_2_RayMasks = calculate_ray_masks(square_value::A_2);
-  constexpr std::array<u64, 8> B_2_RayMasks = calculate_ray_masks(square_value::B_2);
-  constexpr std::array<u64, 8> C_2_RayMasks = calculate_ray_masks(square_value::C_2);
-  constexpr std::array<u64, 8> D_2_RayMasks = calculate_ray_masks(square_value::D_2);
-  constexpr std::array<u64, 8> E_2_RayMasks = calculate_ray_masks(square_value::E_2);
-  constexpr std::array<u64, 8> F_2_RayMasks = calculate_ray_masks(square_value::F_2);
-  constexpr std::array<u64, 8> G_2_RayMasks = calculate_ray_masks(square_value::G_2);
-  constexpr std::array<u64, 8> H_2_RayMasks = calculate_ray_masks(square_value::H_2);
+    while (bit) {
+        u8 file = __builtin_ctzll(bit) % 8;
+        u8 rank = __builtin_ctzll(bit) >> 3;
 
-  constexpr std::array<u64, 8> A_3_RayMasks = calculate_ray_masks(square_value::A_3);
-  constexpr std::array<u64, 8> B_3_RayMasks = calculate_ray_masks(square_value::B_3);
-  constexpr std::array<u64, 8> C_3_RayMasks = calculate_ray_masks(square_value::C_3);
-  constexpr std::array<u64, 8> D_3_RayMasks = calculate_ray_masks(square_value::D_3);
-  constexpr std::array<u64, 8> E_3_RayMasks = calculate_ray_masks(square_value::E_3);
-  constexpr std::array<u64, 8> F_3_RayMasks = calculate_ray_masks(square_value::F_3);
-  constexpr std::array<u64, 8> G_3_RayMasks = calculate_ray_masks(square_value::G_3);
-  constexpr std::array<u64, 8> H_3_RayMasks = calculate_ray_masks(square_value::H_3);
+        if ((the_direction == Direction::nort  && rank == 7) ||
+            (the_direction == Direction::east  && file == 7) ||
+            (the_direction == Direction::sout  && rank == 0) ||
+            (the_direction == Direction::west  && file == 0) ||
 
-  constexpr std::array<u64, 8> A_4_RayMasks = calculate_ray_masks(square_value::A_4);
-  constexpr std::array<u64, 8> B_4_RayMasks = calculate_ray_masks(square_value::B_4);
-  constexpr std::array<u64, 8> C_4_RayMasks = calculate_ray_masks(square_value::C_4);
-  constexpr std::array<u64, 8> D_4_RayMasks = calculate_ray_masks(square_value::D_4);
-  constexpr std::array<u64, 8> E_4_RayMasks = calculate_ray_masks(square_value::E_4);
-  constexpr std::array<u64, 8> F_4_RayMasks = calculate_ray_masks(square_value::F_4);
-  constexpr std::array<u64, 8> G_4_RayMasks = calculate_ray_masks(square_value::G_4);
-  constexpr std::array<u64, 8> H_4_RayMasks = calculate_ray_masks(square_value::H_4);
+            (the_direction == Direction::noEa  && (file == 7 || rank == 7)) ||
+            (the_direction == Direction::soEa  && (file == 7 || rank == 0)) ||
+            (the_direction == Direction::soWe  && (file == 0 || rank == 0)) ||
+            (the_direction == Direction::noWe  && (file == 0 || rank == 7))) {
+            break;
+        }
 
-  constexpr std::array<u64, 8> A_5_RayMasks = calculate_ray_masks(square_value::A_5);
-  constexpr std::array<u64, 8> B_5_RayMasks = calculate_ray_masks(square_value::B_5);
-  constexpr std::array<u64, 8> C_5_RayMasks = calculate_ray_masks(square_value::C_5);
-  constexpr std::array<u64, 8> D_5_RayMasks = calculate_ray_masks(square_value::D_5);
-  constexpr std::array<u64, 8> E_5_RayMasks = calculate_ray_masks(square_value::E_5);
-  constexpr std::array<u64, 8> F_5_RayMasks = calculate_ray_masks(square_value::F_5);
-  constexpr std::array<u64, 8> G_5_RayMasks = calculate_ray_masks(square_value::G_5);
-  constexpr std::array<u64, 8> H_5_RayMasks = calculate_ray_masks(square_value::H_5);
+        bit = (shift > 0) ? (bit << shift) : (bit >> -shift);
+        mask |= bit;
+    }
 
-  constexpr std::array<u64, 8> A_6_RayMasks = calculate_ray_masks(square_value::A_6);
-  constexpr std::array<u64, 8> B_6_RayMasks = calculate_ray_masks(square_value::B_6);
-  constexpr std::array<u64, 8> C_6_RayMasks = calculate_ray_masks(square_value::C_6);
-  constexpr std::array<u64, 8> D_6_RayMasks = calculate_ray_masks(square_value::D_6);
-  constexpr std::array<u64, 8> E_6_RayMasks = calculate_ray_masks(square_value::E_6);
-  constexpr std::array<u64, 8> F_6_RayMasks = calculate_ray_masks(square_value::F_6);
-  constexpr std::array<u64, 8> G_6_RayMasks = calculate_ray_masks(square_value::G_6);
-  constexpr std::array<u64, 8> H_6_RayMasks = calculate_ray_masks(square_value::H_6);
+    return mask;
+}
 
-  constexpr std::array<u64, 8> A_7_RayMasks = calculate_ray_masks(square_value::A_7);
-  constexpr std::array<u64, 8> B_7_RayMasks = calculate_ray_masks(square_value::B_7);
-  constexpr std::array<u64, 8> C_7_RayMasks = calculate_ray_masks(square_value::C_7);
-  constexpr std::array<u64, 8> D_7_RayMasks = calculate_ray_masks(square_value::D_7);
-  constexpr std::array<u64, 8> E_7_RayMasks = calculate_ray_masks(square_value::E_7);
-  constexpr std::array<u64, 8> F_7_RayMasks = calculate_ray_masks(square_value::F_7);
-  constexpr std::array<u64, 8> G_7_RayMasks = calculate_ray_masks(square_value::G_7);
-  constexpr std::array<u64, 8> H_7_RayMasks = calculate_ray_masks(square_value::H_7);
 
-  constexpr std::array<u64, 8> A_8_RayMasks = calculate_ray_masks(square_value::A_8);
-  constexpr std::array<u64, 8> B_8_RayMasks = calculate_ray_masks(square_value::B_8);
-  constexpr std::array<u64, 8> C_8_RayMasks = calculate_ray_masks(square_value::C_8);
-  constexpr std::array<u64, 8> D_8_RayMasks = calculate_ray_masks(square_value::D_8);
-  constexpr std::array<u64, 8> E_8_RayMasks = calculate_ray_masks(square_value::E_8);
-  constexpr std::array<u64, 8> F_8_RayMasks = calculate_ray_masks(square_value::F_8);
-  constexpr std::array<u64, 8> G_8_RayMasks = calculate_ray_masks(square_value::G_8);
-  constexpr std::array<u64, 8> H_8_RayMasks = calculate_ray_masks(square_value::H_8);
+  constexpr u64 calculate_knight_moves(SquareValue the_square) {
+    u64 xd = 0;
+    return xd;
+  } ;
+
+  constexpr std::array<std::array<u64, 8>, 64> AllRayMasks = calculate_ray_masks();
 
 }
 
